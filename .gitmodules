@@ -1,0 +1,3 @@
+[submodule "pytorch-cpn"]
+	path = pytorch-cpn
+	url = https://github.com/GengDavid/pytorch-cpn.git
