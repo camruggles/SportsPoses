@@ -1,3 +1,6 @@
 [submodule "pytorch-cpn"]
 	path = pytorch-cpn
 	url = https://github.com/GengDavid/pytorch-cpn.git
+[submodule "annotator/human-pose-annotation-tool"]
+	path = annotator/human-pose-annotation-tool
+	url = https://github.com/aimagelab/human-pose-annotation-tool.git
