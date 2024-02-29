@@ -54,7 +54,6 @@ def main(args):
     meta: dictionary comprised of
     dict_keys(['index', 'imgID', 'GT_bbox', 'img_path', 'augmentation_details', 'det_scores'])
     not sure what aug details are, det scores, or where the keypoints gt are and where gt bbox comes from
-
     '''
 
     '''
@@ -75,7 +74,6 @@ def main(args):
             global_outputs, refine_output = model(input_var)
             score_map = refine_output.data.cpu()
             score_map = score_map.numpy()
-            pdb.set_trace()
             # score map?
 
             if args.flip == True:
@@ -145,12 +143,27 @@ def main(args):
                     single_result_dict['keypoints'] = single_result # single_result contains 17x3 predictions, but pixels are out of bounds of 384x288
                     single_result_dict['score'] = float(det_scores[b])*v_score.mean() # rescoring happens here
                     
-                    pdb.set_trace()
                     # load the original image
+                    filename = meta['img_path'][b]
+                    img = cv2.imread(filename)
                     # plot dots on the pixels described from single_result_dict
+                    keypoints= single_result_dict['keypoints']
+                    #print(img.shape)
+                    for x,y,v,p in zip(keypoints[0::3], keypoints[1::3], keypoints[2::3], range(17)):
+                        if v != 1:
+                            print(filename)
+                        print(x,y, v, v_score[p])
+                        img = cv2.circle(img, (int(x),int(y)), radius=3, color=(0, 0, 255), thickness=-1)
+                        #print(img.shape)
                     # save to a file
+                    new_filename = './plots/dotted_'+os.path.split(filename)[-1][:-4]+"_"+str(b)+".jpg"
+                    cv2.imwrite(new_filename, img)
+                    print(new_filename)
+                    #print(v_score)
                     full_result.append(single_result_dict)
+        break
 
+    quit()
     result_path = args.result
     # write all the results to a json
     if not isdir(result_path):
