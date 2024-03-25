@@ -27,6 +27,9 @@ from dataloader.mscocoMulti import MscocoMulti
 from tqdm import tqdm
 import pdb
 
+colors = [(0,0,255),(171,0,255),(222,0,255),(255,0,205),(255,0,145),(255,0,77),(255,0,26),(255,85,0),(255,162,0),(255,239,0),
+    (188,255,0),(145,255,0),(68,255,0),(0,255,0),(0,255,230),(0,188,255),(0,128,255)]
+
 def main(args):
     # create model
     model = network.__dict__[cfg.model](cfg.output_shape, cfg.num_class, pretrained = False)
@@ -60,6 +63,8 @@ def main(args):
     does the code only grab the pixels for the body and resize them, and then compare to the gt outside the code
     '''
     for i, (inputs, meta) in tqdm(enumerate(test_loader)):
+        pdb.set_trace()
+        cv2.imwrite("temp.jpg", inputs[0].numpy())
         with torch.no_grad():
             input_var = torch.autograd.Variable(inputs.cuda())
             if args.flip == True:
@@ -74,6 +79,7 @@ def main(args):
             global_outputs, refine_output = model(input_var)
             score_map = refine_output.data.cpu()
             score_map = score_map.numpy()
+            pdb.set_trace()
             # score map?
 
             if args.flip == True:
@@ -100,6 +106,7 @@ def main(args):
                 single_result = []
                 
                 single_map = score_map[b]
+                pdb.set_trace()
                 r0 = single_map.copy()
                 r0 /= 255
                 r0 += 0.5
@@ -111,11 +118,13 @@ def main(args):
                     dr = np.zeros((cfg.output_shape[0] + 2*border, cfg.output_shape[1]+2*border)) # image shape with a 10 border
                     dr[border:-border, border:-border] = single_map[p].copy() # copy image into border
                     dr = cv2.GaussianBlur(dr, (21, 21), 0) # described in paper
-                    lb = dr.argmax() # 
-                    y, x = np.unravel_index(lb, dr.shape) # 
+                    lb1 = dr.argmax() # 
+                    y, x = np.unravel_index(lb1, dr.shape) # 
+                    peak1 = dr[y,x]
                     dr[y, x] = 0
-                    lb = dr.argmax()
-                    py, px = np.unravel_index(lb, dr.shape) # getting a nother peak?
+                    lb2 = dr.argmax()
+                    py, px = np.unravel_index(lb2, dr.shape) # getting a nother peak?
+                    peak2 = dr[py,px]
                     y -= border
                     x -= border
                     py -= border + y
@@ -153,7 +162,7 @@ def main(args):
                         if v != 1:
                             print(filename)
                         print(x,y, v, v_score[p])
-                        img = cv2.circle(img, (int(x),int(y)), radius=3, color=(0, 0, 255), thickness=-1)
+                        img = cv2.circle(img, (int(x),int(y)), radius=3, color=colors[p], thickness=-1)
                         #print(img.shape)
                     # save to a file
                     new_filename = './plots/dotted_'+os.path.split(filename)[-1][:-4]+"_"+str(b)+".jpg"

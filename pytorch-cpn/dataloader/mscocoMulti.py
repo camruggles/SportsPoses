@@ -158,6 +158,7 @@ class MscocoMulti(data.Dataset):
         gt_bbox = a['unit']['GT_bbox']
 
         image = imageio.imread(img_path, mode='RGB')
+        # crop the gt bbox from the image
         if self.is_train:
             image, points, details = self.augmentationCropImage(image, gt_bbox, points)
         else:
