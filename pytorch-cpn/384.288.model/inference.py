@@ -64,7 +64,13 @@ def main(args):
     '''
     for i, (inputs, meta) in tqdm(enumerate(test_loader)):
         pdb.set_trace()
-        cv2.imwrite("temp.jpg", inputs[0].numpy())
+        for j in range(inputs.shape[0]):
+            temp_img = inputs[j].numpy().transpose(1,2,0)
+            temp_img += 1
+            temp_img *= 128
+            temp_img = temp_img.astype(np.uint8)
+            cv2.imwrite("temp_{}.jpg".format(j), temp_img )
+        quit()
         with torch.no_grad():
             input_var = torch.autograd.Variable(inputs.cuda())
             if args.flip == True:
