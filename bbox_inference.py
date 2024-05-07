@@ -225,7 +225,10 @@ def write_to_json(good_boxes, imgid = None):
         json.dump(good_boxes, fp)
 
 BOX_PADDING = 10
-COUNTER= 12
+COUNTER= 16
+
+# skipped 14-18
+# complete 0-13, 19, 
 # MAX 88
 # load in images
 imgs = []
