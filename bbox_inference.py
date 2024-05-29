@@ -79,6 +79,9 @@ mouseY = [-1]
 
 
 def draw_circle(event,x,y,flags,param):
+    '''
+    This function is a callback used to register mouse clicks in the user interface
+    '''
     global mouseX,mouseY
     if event == cv2.EVENT_LBUTTONDBLCLK:
         print('click', x,y)
@@ -87,7 +90,9 @@ def draw_circle(event,x,y,flags,param):
         mouseY.append(y)
 
 def box_area(box):
-    ''' box is a tensor'''
+    ''' box is a tensor
+    This function computes the area of a box
+    '''
     [[x1,y1,x2,y2]] = box
     return (x2-x1) * (y2-y1)
 
@@ -100,6 +105,9 @@ def render_and_wait(predictions, box=None):
 
     returns:
     the key code from cv2 waitKey key press
+
+    This function loads an image and it's main bounding box prediction and displays it, and waits for a OpenCV key press and then returns the key code
+    This function is called by a loop that provides some interaction with the UI
     '''
     #visualize the bounding box and other predictions
     v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(config.DATASETS.TRAIN[0]), scale=1.0) # big bug here, make scale 1.0
@@ -207,6 +215,7 @@ def write_to_json(good_boxes, imgid = None):
 
     args:
     good_boxes, a list of dictionaries containing the image name and the desired bounding box to be used for later
+    imgid: an integer, will be used instead of the time of program execution to name the output json file
 
     returns:
     none
@@ -227,16 +236,19 @@ def write_to_json(good_boxes, imgid = None):
 BOX_PADDING = 10
 COUNTER= 16
 
+# usage notes, ignore
 # skipped 14-18
 # complete 0-13, 19, 
 # MAX 88
 # load in images
+
+# enumerate image data that will be loaded into this run of the program
 imgs = []
 names = []
-#print(len(os.listdir("./imgs")))
 i1 = COUNTER*206
 i2 = (COUNTER+1) * 206 + 1
-#print(i1,i2)
+
+# load frames that will be validated in this program
 for f in os.listdir("./imgs")[i1:i2]:
     filepath = os.path.join("./imgs", f)
     im = cv2.imread(filepath)
@@ -244,7 +256,11 @@ for f in os.listdir("./imgs")[i1:i2]:
     names.append(filepath)
 
 
+
+
+
 '''
+BUILD THE PREDICTION COMPONENT
 code taken from https://colab.research.google.com/drive/16jcaJoc6bCFAQ96jDe2HwtXj7BMD_-m5
 '''
 config = get_cfg()
@@ -257,7 +273,13 @@ predictor = DefaultPredictor(config)
 #predictor = build_model(config)
 
 
-good_boxes = {}
+
+
+
+
+
+
+good_boxes = {} # output of program
 
 cv2.namedWindow("pane")
 cv2.setMouseCallback('pane',draw_circle)
@@ -268,15 +290,13 @@ last_index = [0]
 last_img_id = None
 while i < len(imgs):
     
+    # extract image filename info
     name = names[i]
     _, name = os.path.split(name)
     imgid = name[:3]
-    #print('info')
     print(name)
-    #print(imgid)
-    #print(last_img_id)
     
-    # if the image is from a new video, write the recorded boxes to a file and reload the data structure
+    # if the program is moving between two videos while displaying frames, write the recorded boxes to a file and reload the data structure
     if last_img_id is None:
         last_img_id = imgid
     if last_img_id != imgid and len(good_boxes) != 0:
@@ -286,7 +306,7 @@ while i < len(imgs):
         good_boxes = {}
 
 
-    # if the image is from a video we've already seen, skip
+    # if the image is from a video we've already fully seen, skip
     if 'boxes_{}.json'.format(imgid) in os.listdir(SAVEPATH):
         i += 1
         continue
@@ -296,13 +316,9 @@ while i < len(imgs):
 
     # perform inference
     im = imgs[i]
-    #print(im.shape)
     height,width,c = im.shape
     outputs = predictor(im)
 
-    # #print(outputs["instances"].pred_classes)
-    # #print(outputs["instances"].pred_boxes)
-    #print(names[i])
 
 
     gymnast_detected_flag =False
@@ -313,22 +329,20 @@ while i < len(imgs):
     maxIndex= -1
 
     maxScore = 0.0
-    #print('average',np.average(im))
-    if np.average(im) > 10:
+    if np.average(im) > 10: # not a black frame
         visualize_img_flag = True
-    if len(outputs['instances'])>0:
+    if len(outputs['instances'])>0: # if there are any predictions made by the network
         # find the largest box
         for j in range(len(outputs['instances'])):
             # if not human, disqualify
             if outputs['instances'][j].pred_classes != 0:
                 continue
             box = outputs['instances'][j].pred_boxes
-            score = outputs['instances'][j].scores
+            score = outputs['instances'][j].scores # confidence levels of the classified shape, i.e. degree of belief of human label being correct
             
             # see if it's near center, disqualify if on edges of image
             centered, center_distance = near_center(box, height, width, score)
             if not centered:
-                # pass
                 continue
             
             # if box_area(box) > maxArea:# and score >= 0.7:
@@ -336,19 +350,11 @@ while i < len(imgs):
             #     maxIndex=j
 
             # compute criteria and determine if it's the best
-            # debug information
             tempScore = box_area(box) * score * score
-            # #print(j)
-            # #print(box_area(box))
-            # #print(score)
-            # #print(center_distance, 1-center_distance)
-            # #print(tempScore)
 
             if tempScore > maxScore:
                 maxScore = tempScore
                 maxIndex=j
-                # #print("max index set")
-            #print()
         
         if maxIndex != -1:
             gymnast_detected_flag=True
@@ -357,10 +363,9 @@ while i < len(imgs):
     if visualize_img_flag:
         # We can use `Visualizer` to draw the predictions on the image.
         if gymnast_detected_flag:
-            # visualize the best bbox
+            # visualize the best bbox and get key code from user
             predictions = outputs['instances'][maxIndex].to("cpu")
             
-            #print(box_area(predictions.pred_boxes))
             box = predictions.pred_boxes
             key = render_and_wait(predictions, box)
             
@@ -372,13 +377,12 @@ while i < len(imgs):
 
 
 
-        # if space, good
+        # if space, good prediction, save it
         if key == SPACE_KEY:
             print("SPACE")
             print(predictions.pred_boxes)
             [[x1,y1,x2,y2]] = predictions.pred_boxes
-            #print(x1,y1,x2,y2)
-            #print(type(x1))
+
             x1 = max(x1-BOX_PADDING,torch.Tensor([0]))
             y1 = max(y1-BOX_PADDING, torch.Tensor([0]))
             x2 = min(x2+BOX_PADDING, torch.Tensor([width]))
@@ -388,7 +392,6 @@ while i < len(imgs):
 
         # if w, show more boxes
         # if w key, reshow the image with all the bounding boxes from inference to debug
-        # if key == 119:
         if key == W_KEY:
             #print("W")
             predictions = outputs['instances'].to("cpu")
@@ -401,26 +404,18 @@ while i < len(imgs):
 
             # r, click new box
             if key == R_KEY:
-                #print("R")
-                #print(mouseX, mouseY)
-                pass
-                # #print("here")
                 # get mouse click location
                 x,y = mouseX.pop(), mouseY.pop()
+
+
                 # iterate over 0 class boxes until you find a box that contains the mouse click
                 predictions = outputs['instances'].to("cpu")
-                # #print("here")
                 def click_in_box(x,y,box):
-                    
-                    # #print(box)
-                    # #print(x,y)
                     x1,y1,x2,y2 = box
-                    # quit()
                     if x1 <= x and x <= x2 and y1 <= y and y <= y2:
                         return True
                     return False
                 for box in predictions.pred_boxes:
-                    # #print("here")
                     if click_in_box(x,y,box):
                         x1,y1,x2,y2 = box
                         x1 = max(x1-BOX_PADDING,torch.Tensor([0]))
@@ -432,12 +427,10 @@ while i < len(imgs):
                         
                         good_boxes[names[i]] = {"filename": names[i], "x1": x1.item(), "y1": y1.item(), "x2":x2.item(), "y2":y2.item()}
                         break
-                        # #print('appending', {"filename": names[i], "x1": x1.item(), "y1": y1.item(), "x2":x2.item(), "y2":y2.item()})
-
                 # add this to good boxes
                 # if a misclick, just move on to the next image and then hit backspace
         
-            # d, draw new box
+            # d, draw new box by clicking on the image twice
             if key == D_KEY:
                 print("D")
                 pass
